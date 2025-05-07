@@ -1,7 +1,9 @@
 package srangeldev.database
 
+import org.apache.ibatis.jdbc.ScriptRunner
 import org.lighthousegames.logging.logging
 import srangeldev.config.AppConfig
+import java.io.PrintWriter
 import java.io.Reader
 import java.sql.Connection
 import java.sql.DriverManager
@@ -44,7 +46,7 @@ object DataBaseManager : AutoCloseable {
             val tablas = ClassLoader.getSystemResourceAsStream("tablas.sql")?.bufferedReader()
                 ?: throw Exception("No se encontró el archivo tablas.sql")
             scriptRunner(tablas, true)
-            logger.debug { "Tablas de la base de datos creadas" }
+            logger.debug { "Tablas de la base de datos creadas correctamente." }
         } catch (e: Exception) {
             logger.error { "Error al crear las tablas de la base de datos: ${e.message}" }
         }
@@ -56,7 +58,7 @@ object DataBaseManager : AutoCloseable {
             val datos = ClassLoader.getSystemResourceAsStream("datos.sql")?.bufferedReader()
                 ?: throw Exception("No se encontró el archivo datos.sql")
             scriptRunner(datos, true)
-            logger.debug { "Datos de la base de datos cargados" }
+            logger.debug { "Datos de la base de datos cargados correctamente." }
         } catch (e: Exception) {
             logger.error { "Error al cargar los datos de la base de datos: ${e.message}" }
         }
@@ -67,15 +69,18 @@ object DataBaseManager : AutoCloseable {
         connection?.let {
             if (!it.isClosed) {
                 it.close()
-                logger.debug { "Conexión con la base de datos cerrada" }
+                logger.debug { "Conexión con la base de datos cerrada correctamente." }
             }
         }
     }
 
     fun <T> use(block: (DataBaseManager) -> T) {
         initConexion()
-        this.connection.use { block(this) }
-        close()
+        try {
+            block(this)
+        } finally {
+            close()
+        }
     }
 
     private fun scriptRunner(reader: Reader, logWriter: Boolean = false) {
@@ -83,13 +88,9 @@ object DataBaseManager : AutoCloseable {
             throw IllegalStateException("Error: la conexión con la base de datos no está establecida.")
         }
 
-        connection!!.createStatement().use { stmt ->
-            reader.useLines { lines ->
-                lines.filter { it.isNotBlank() }
-                    .forEach { stmt.execute(it.trim()) }
-            }
-        }
-
-        logger.debug { "Script SQL ejecutado correctamente." }
+        logger.debug { "Ejecutando script SQL con log: $logWriter" }
+        val sr = ScriptRunner(connection!!)
+        sr.setLogWriter(if (logWriter) PrintWriter(System.out) else null)
+        sr.runScript(reader)
     }
 }

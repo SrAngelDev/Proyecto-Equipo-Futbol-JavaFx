@@ -37,7 +37,7 @@ module srangeldev.proyectoequipofutboljavafx {
 
     // Cache
     requires com.github.benmanes.caffeine;
-
+    requires org.mybatis;
 
 
     opens srangeldev.proyectoequipofutboljavafx to javafx.fxml;
