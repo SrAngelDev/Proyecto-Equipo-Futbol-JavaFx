@@ -7,7 +7,7 @@ import javafx.stage.Stage
 
 class HelloApplication : Application() {
     override fun start(stage: Stage) {
-        val fxmlLoader = FXMLLoader(HelloApplication::class.java.getResource("hello-view.fxml"))
+        val fxmlLoader = FXMLLoader(HelloApplication::class.java.getResource("views/splash-screen.fxml"))
         val scene = Scene(fxmlLoader.load(), 320.0, 240.0)
         stage.title = "Hello!"
         stage.scene = scene
