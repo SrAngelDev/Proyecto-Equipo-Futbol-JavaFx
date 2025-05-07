@@ -1,8 +1,8 @@
 package srangeldev.service
 
 import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import org.lighthousegames.logging.logging
-import srangeldev.Cache.Cache
 import srangeldev.exceptions.PersonalException
 import srangeldev.models.Personal
 import srangeldev.repository.PersonalRepository
@@ -59,10 +59,12 @@ class PersonalServiceImpl(
 
     override fun getById(id: Int): Personal? {
         logger.info { "Obteniendo personal con id: $id" }
-        return cache.get(id) ?: repository.getById(id)?.also {
+
+        return cache.getIfPresent(id) ?: repository.getById(id)?.also {
             cache.put(id, it)
         } ?: throw PersonalException.PersonalNotFoundException(id)
     }
+
 
     override fun save(personal: Personal): Personal {
         logger.info { "Guardando personal: $personal" }
@@ -74,14 +76,14 @@ class PersonalServiceImpl(
         logger.info { "Actualizando personal con id: $id" }
         personal.validate()
         return repository.update(id, personal)?.also {
-            cache.remove(id)
+            cache.invalidate(id)
         } ?: throw PersonalException.PersonalNotFoundException(id)
     }
 
     override fun delete(id: Int): Personal {
         logger.info { "Borrando personal con id: $id" }
         return repository.delete(id)?.also {
-            cache.remove(id)
+            cache.invalidate(id)
         } ?: throw PersonalException.PersonalNotFoundException(id)
     }
 }

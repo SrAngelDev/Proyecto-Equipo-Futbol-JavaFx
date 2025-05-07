@@ -7,8 +7,10 @@ import srangeldev.config.AppConfig
 import srangeldev.models.Entrenador
 import srangeldev.models.Jugador
 import srangeldev.models.Personal
+import srangeldev.repository.PersonalRespositoryImpl
 import srangeldev.service.PersonalServiceImpl
 import srangeldev.storage.FileFormat
+import srangeldev.storage.PersonalStorageImpl
 import java.nio.file.Paths
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -17,7 +19,11 @@ private val logger = logging()
 private val appConfig = AppConfig()
 
 class Controller {
-    private val service = PersonalServiceImpl()
+    private val service = PersonalServiceImpl(
+        storage = PersonalStorageImpl(),
+        repository = PersonalRespositoryImpl(),
+        cache = provideCache(AppConfig())
+    )
 
     fun cargarDatos(formato: String) {
         logger.debug { "Cargando datos" }
