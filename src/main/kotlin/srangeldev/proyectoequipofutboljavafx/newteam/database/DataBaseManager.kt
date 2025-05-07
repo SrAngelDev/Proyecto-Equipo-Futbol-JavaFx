@@ -1,17 +1,15 @@
 package srangeldev.database
 
-import org.apache.ibatis.jdbc.ScriptRunner
 import org.lighthousegames.logging.logging
-import srangeldev.config.Config
-import java.io.PrintWriter
+import srangeldev.config.AppConfig
 import java.io.Reader
 import java.sql.Connection
 import java.sql.DriverManager
 
-object DataBaseManager: AutoCloseable {
+object DataBaseManager : AutoCloseable {
     private val logger = logging()
+    private val appConfig = AppConfig() // Instancia de AppConfig para obtener configuraciones
 
-    // Realizamos conexión con la base de datos
     var connection: Connection? = null
         private set
 
@@ -21,19 +19,19 @@ object DataBaseManager: AutoCloseable {
 
     private fun initDatabase() {
         initConexion()
-        if (Config.configProperties.databaseInitTables) {
+        if (appConfig.databaseInitTables) {
             initTablas()
         }
-        if (Config.configProperties.databaseInitData) {
+        if (appConfig.databaseInitData) {
             initData()
         }
         close()
     }
 
     private fun initConexion() {
-        logger.debug { "Iniciando conexión con la base de datos en ${Config.configProperties.databaseUrl}" }
+        logger.debug { "Iniciando conexión con la base de datos en ${appConfig.databaseUrl}" }
         if (connection == null || connection!!.isClosed) {
-            connection = DriverManager.getConnection(Config.configProperties.databaseUrl)
+            connection = DriverManager.getConnection(appConfig.databaseUrl)
             logger.debug { "Conexión con la base de datos iniciada" }
         } else {
             logger.debug { "La conexión con la base de datos ya está iniciada" }
@@ -43,9 +41,10 @@ object DataBaseManager: AutoCloseable {
     private fun initTablas() {
         logger.debug { "Creando tablas de la base de datos" }
         try {
-            val tablas = ClassLoader.getSystemResourceAsStream("tablas.sql")?.bufferedReader()!!
+            val tablas = ClassLoader.getSystemResourceAsStream("tablas.sql")?.bufferedReader()
+                ?: throw Exception("No se encontró el archivo tablas.sql")
             scriptRunner(tablas, true)
-            logger.debug { "Tablas de la base de datos equipo creadas" }
+            logger.debug { "Tablas de la base de datos creadas" }
         } catch (e: Exception) {
             logger.error { "Error al crear las tablas de la base de datos: ${e.message}" }
         }
@@ -54,9 +53,10 @@ object DataBaseManager: AutoCloseable {
     private fun initData() {
         logger.debug { "Iniciando carga de datos de la base de datos" }
         try {
-            val datos = ClassLoader.getSystemResourceAsStream("datos.sql")?.bufferedReader()!!
+            val datos = ClassLoader.getSystemResourceAsStream("datos.sql")?.bufferedReader()
+                ?: throw Exception("No se encontró el archivo datos.sql")
             scriptRunner(datos, true)
-            logger.debug { "Datos de la base de datos equipo cargados" }
+            logger.debug { "Datos de la base de datos cargados" }
         } catch (e: Exception) {
             logger.error { "Error al cargar los datos de la base de datos: ${e.message}" }
         }
@@ -64,15 +64,13 @@ object DataBaseManager: AutoCloseable {
 
     override fun close() {
         logger.debug { "Cerrando conexión con la base de datos" }
-        if (!connection!!.isClosed) {
-            connection!!.close()
+        connection?.let {
+            if (!it.isClosed) {
+                it.close()
+                logger.debug { "Conexión con la base de datos cerrada" }
+            }
         }
-        logger.debug { "Conexión con la base de datos cerrada" }
     }
-
-    /**
-     * Función para usar la base de datos y cerrarla al finalizar la operación
-     */
 
     fun <T> use(block: (DataBaseManager) -> T) {
         initConexion()
@@ -80,14 +78,18 @@ object DataBaseManager: AutoCloseable {
         close()
     }
 
-    /**
-     * Función para ejecutar un script SQL en la base de datos
-     */
-
     private fun scriptRunner(reader: Reader, logWriter: Boolean = false) {
-        logger.debug { "Ejecutando script SQL con log: $logWriter" }
-        val sr = ScriptRunner(connection)
-        sr.setLogWriter(if (logWriter) PrintWriter(System.out) else null)
-        sr.runScript(reader)
+        if (connection == null || connection!!.isClosed) {
+            throw IllegalStateException("Error: la conexión con la base de datos no está establecida.")
+        }
+
+        connection!!.createStatement().use { stmt ->
+            reader.useLines { lines ->
+                lines.filter { it.isNotBlank() }
+                    .forEach { stmt.execute(it.trim()) }
+            }
+        }
+
+        logger.debug { "Script SQL ejecutado correctamente." }
     }
 }

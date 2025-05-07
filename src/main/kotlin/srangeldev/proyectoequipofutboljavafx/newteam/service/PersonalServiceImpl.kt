@@ -1,8 +1,8 @@
 package srangeldev.service
 
+import com.github.benmanes.caffeine.cache.Cache
 import org.lighthousegames.logging.logging
 import srangeldev.Cache.Cache
-import srangeldev.Cache.CacheImpl
 import srangeldev.exceptions.PersonalException
 import srangeldev.models.Personal
 import srangeldev.repository.PersonalRepository
@@ -21,7 +21,7 @@ private const val CACHE_SIZE = 5
 class PersonalServiceImpl(
     private val storage: PersonalStorage = PersonalStorageImpl(),
     private val repository: PersonalRepository = PersonalRespositoryImpl(),
-    private val cache: Cache<Int, Personal> = CacheImpl(CACHE_SIZE)
+    private val cache: Cache<Int, Personal>
 ): PersonalService {
     private val logger = logging()
 
