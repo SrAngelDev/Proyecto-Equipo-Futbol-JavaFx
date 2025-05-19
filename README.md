@@ -101,7 +101,7 @@ La vista de usuario normal proporciona acceso limitado:
 ## Colaboradores
 
 - Ángel Sánchez Gasanz
-- Jorge Morgado Giménez
+- Jorge Morgado Jiménez
 - Antoine López
 
 ## Licencia
